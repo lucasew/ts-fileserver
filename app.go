@@ -22,15 +22,17 @@ type AppParams struct {
 	StateDir string
 	Name     string
 	Funnel   bool
+	Writable bool
 }
 
 type app struct {
-	ctx     context.Context
-	root    string
-	cancel  func()
-	server  *tsnet.Server
-	handler *FileServer
-	funnel  bool
+	ctx      context.Context
+	root     string
+	cancel   func()
+	server   *tsnet.Server
+	handler  *FileServer
+	funnel   bool
+	writable bool
 }
 
 var (
@@ -55,7 +57,7 @@ func NewApp(args AppParams) (*app, error) {
 
 	ctx, cancel := context.WithCancel(args.Ctx)
 
-	handler, err := NewFileServer(args.Root)
+	handler, err := NewFileServer(args.Root, args.Writable)
 	if err != nil {
 		return nil, err
 	}
@@ -70,8 +72,13 @@ func NewApp(args AppParams) (*app, error) {
 	}, nil
 }
 
+func (a *app) Close() {
+	defer a.cancel()
+}
+
 func (a *app) Run() error {
 	log.Printf("Starting file server on %s", a.handler.Root())
+	defer a.cancel()
 	var ln net.Listener
 	var err error
 	if a.funnel {
@@ -87,11 +94,15 @@ func (a *app) Run() error {
 		log.Printf("To use it please access: https://%s", domain)
 	}
 	httpServer := http.Server{Handler: a.handler}
-	return httpServer.Serve(ln)
+	if err := httpServer.Serve(ln); err != nil {
+		return err
+	}
+	return nil
 }
 
 type FileServer struct {
-	root string
+	root     string
+	writable bool
 }
 
 const HTML_PRELUDE = `
@@ -109,16 +120,31 @@ const HTML_PRELUDE = `
 <script>
 async function upload() {
 	const input = document.getElementById("file")
-	console.log("upload")
+	for (const file of input.files) {
+	    const {name} = file
+	    const url = window.location.toString() + "/" + name
+	    const xhr = new XMLHttpRequest()
+	    xhr.open('POST', url, true)
+	    xhr.upload.onprogress = function(event) {
+	      if (event.lengthComputable) {
+	          const percentComplete = (event.loaded / event.total) * 100;
+	          document.getElementById("status").innerText = (name + ": " + percentComplete.toFixed(2) + "%");
+	      }
+		};
+	    console.log(file)
+	    xhr.send(file)
+	}
+	document.getElementById("status").innerText = "Finished"
 }
 </script>
 
 <input type="file" id="file" multiple /><button onclick="upload()">Upload</button>
+<p id="status"></p>
 <ul>
 `
 
 func (f *FileServer) WriteHTMLPrelude(w io.Writer) {
-	fmt.Fprintf(w, HTML_PRELUDE)
+	fmt.Fprintf(w, "%s", HTML_PRELUDE)
 }
 
 // ServeHTTP implements http.Handler.
@@ -158,10 +184,16 @@ func (f *FileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			w.Header().Add("Content-Length", fmt.Sprintf("%d", info.Size()))
+			w.Header().Add("Content-Type", "application/octet-stream")
 			defer f.Close()
 			buf := make([]byte, 1024*1024)
 			io.CopyBuffer(w, f, buf)
 		}
+	}
+	if r.Method == http.MethodPost && !f.writable {
+		w.WriteHeader(http.StatusForbidden)
+		fmt.Fprintf(w, "i'm afraid i can't do that")
+		return
 	}
 	if r.Method == http.MethodPost {
 		info, err := os.Stat(item)
@@ -192,7 +224,7 @@ func (f *FileServer) Root() string {
 	return f.root
 }
 
-func NewFileServer(root string) (*FileServer, error) {
+func NewFileServer(root string, writable bool) (*FileServer, error) {
 	root, err := filepath.Abs(root)
 	if err != nil {
 		return nil, err
@@ -204,5 +236,5 @@ func NewFileServer(root string) (*FileServer, error) {
 	if !rootInfo.IsDir() {
 		return nil, ErrNotADir
 	}
-	return &FileServer{root: root}, nil
+	return &FileServer{root: root, writable: writable}, nil
 }

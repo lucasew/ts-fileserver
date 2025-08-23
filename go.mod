@@ -2,7 +2,10 @@ module github.com/lucasew/ts-fileserver
 
 go 1.24.5
 
-require tailscale.com v1.86.5
+require (
+	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
+	tailscale.com v1.86.5
+)
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
