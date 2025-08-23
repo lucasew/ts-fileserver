@@ -103,7 +103,18 @@ const HTML_PRELUDE = `
     	<title>ts-fileserver</title>
 		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sakura.css/css/sakura.css" type="text/css">
     </head>
+    
 <body>
+
+<script>
+async function upload() {
+	const input = document.getElementById("file")
+	console.log("upload")
+}
+</script>
+
+<input type="file" id="file" multiple /><button onclick="upload()">Upload</button>
+<ul>
 `
 
 func (f *FileServer) WriteHTMLPrelude(w io.Writer) {
@@ -113,7 +124,6 @@ func (f *FileServer) WriteHTMLPrelude(w io.Writer) {
 // ServeHTTP implements http.Handler.
 func (f *FileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%s %s %s", r.Method, r.RemoteAddr, r.URL.Path)
-	w.WriteHeader(200)
 
 	item := path.Join(f.root, r.URL.Path)
 	if !strings.HasPrefix(item, f.root) {
@@ -137,11 +147,9 @@ func (f *FileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			f.WriteHTMLPrelude(w)
 			fmt.Fprintf(w, "<h1>Files in %s</h1>", item)
-			fmt.Fprintf(w, "<ul>")
 			for _, entry := range entries {
 				fmt.Fprintf(w, "<li><a href=\"%s\">%s</a></li>", r.URL.JoinPath(entry.Name()), entry.Name())
 			}
-			fmt.Fprintf(w, "</ul>")
 		} else {
 			f, err := os.Open(item)
 			if err != nil {
@@ -151,7 +159,8 @@ func (f *FileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			w.Header().Add("Content-Length", fmt.Sprintf("%d", info.Size()))
 			defer f.Close()
-			io.Copy(w, f)
+			buf := make([]byte, 1024*1024)
+			io.CopyBuffer(w, f, buf)
 		}
 	}
 	if r.Method == http.MethodPost {
@@ -172,7 +181,8 @@ func (f *FileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprintf(w, "can't create file: %s", err.Error())
 		}
-		io.Copy(f, r.Body)
+		buf := make([]byte, 1024*1024)
+		io.CopyBuffer(f, r.Body, buf)
 
 	}
 
