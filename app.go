@@ -116,11 +116,19 @@ const HTML_PRELUDE = `
     </head>
     
 <body>
+<style>
+#status > * {
+	margin: 0;
+}
+</style>
 
 <script>
 async function upload() {
 	const input = document.getElementById("file")
+	const status = document.getElementById("status")
 	for (const file of input.files) {
+		const paragraph = document.createElement('p')
+		status.appendChild(paragraph)
 	    const {name} = file
 	    const url = window.location.toString() + "/" + name
 	    const xhr = new XMLHttpRequest()
@@ -128,18 +136,22 @@ async function upload() {
 	    xhr.upload.onprogress = function(event) {
 	      if (event.lengthComputable) {
 	          const percentComplete = (event.loaded / event.total) * 100;
-	          document.getElementById("status").innerText = (name + ": " + percentComplete.toFixed(2) + "%");
+	          paragraph.innerText = name + ": " + percentComplete.toFixed(2) + "%"
 	      }
 		};
+	    xhr.onreadystatechange = function() {
+	        if (xhr.readyState === 4) {
+	          paragraph.innerText = name + ": " + "DONE"
+	        }
+	    };
 	    console.log(file)
 	    xhr.send(file)
 	}
-	document.getElementById("status").innerText = "Finished"
 }
 </script>
 
 <input type="file" id="file" multiple /><button onclick="upload()">Upload</button>
-<p id="status"></p>
+<div id="status"></div>
 <ul>
 `
 
@@ -150,11 +162,18 @@ func (f *FileServer) WriteHTMLPrelude(w io.Writer) {
 // ServeHTTP implements http.Handler.
 func (f *FileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%s %s %s", r.Method, r.RemoteAddr, r.URL.Path)
-
 	item := path.Join(f.root, r.URL.Path)
 	if !strings.HasPrefix(item, f.root) {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w, "nice try!")
+		return
+	}
+	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+	w.Header().Set("Pragma", "no-cache")
+	w.Header().Set("Expires", "0")
+	if r.URL.Path == "/installHook.js.map" || r.URL.Path == "/favicon.ico" {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, "these common routes are ignored")
 		return
 	}
 	if r.Method == http.MethodGet {
@@ -184,7 +203,7 @@ func (f *FileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			w.Header().Add("Content-Length", fmt.Sprintf("%d", info.Size()))
-			w.Header().Add("Content-Type", "application/octet-stream")
+			// w.Header().Add("Content-Type", "application/octet-stream")
 			defer f.Close()
 			buf := make([]byte, 1024*1024)
 			io.CopyBuffer(w, f, buf)
@@ -215,9 +234,7 @@ func (f *FileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		buf := make([]byte, 1024*1024)
 		io.CopyBuffer(f, r.Body, buf)
-
 	}
-
 }
 
 func (f *FileServer) Root() string {
