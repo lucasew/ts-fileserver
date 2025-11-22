@@ -113,14 +113,13 @@ jobs:
           --title "$TITLE" \
           --generate-notes
 
-    - uses: svenstaro/upload-release-action@6b7fa9f267e90b50a19fef07b3596790bb941741 # v2
+    - name: Upload release assets
       if: github.event_name != 'pull_request' && env.RELEASE_VERSION != ''
-      with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: build/*
-        tag: ${{ env.RELEASE_VERSION }}
-        overwrite: true
-        file_glob: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        TAG: ${{ env.RELEASE_VERSION }}
+      run: |
+        gh release upload "$TAG" build/* --clobber
 
     - name: "Build and publish container"
       env:
