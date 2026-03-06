@@ -85,8 +85,8 @@ jobs:
       env:
         PR_NUMBER: ${{ steps.pr_create.outputs.pull-request-number }}
       run: |
-        if [[ ! -z "$PR_NUMBER" ]]; then
-          echo "The update scripts changed something and a PR was created. Giving up deploy." >> $GITHUB_STEP_SUMMARY
+        if [[ -n "$PR_NUMBER" ]]; then
+          echo "The update scripts changed something and a PR was created. Giving up deploy." >> "$GITHUB_STEP_SUMMARY"
           exit 1
         fi
 
@@ -105,12 +105,12 @@ jobs:
       env:
         NEW_VERSION: ${{ github.event.inputs.new_version }}
       run: |
-        if [[ ! -z "$NEW_VERSION" ]]; then
+        if [[ -n "$NEW_VERSION" ]]; then
           NO_TAG=1 ./make_release "$NEW_VERSION"
-          echo "New version: $(cat version.txt)" >> $GITHUB_STEP_SUMMARY
-          echo "RELEASE_VERSION=$(cat version.txt)" >> $GITHUB_ENV
+          echo "New version: $(cat version.txt)" >> "$GITHUB_STEP_SUMMARY"
+          echo "RELEASE_VERSION=$(cat version.txt)" >> "$GITHUB_ENV"
         elif [[ "$GITHUB_REF" == refs/tags/* ]]; then
-          echo "RELEASE_VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+          echo "RELEASE_VERSION=${GITHUB_REF#refs/tags/}" >> "$GITHUB_ENV"
         fi
 
     - name: Create relase
