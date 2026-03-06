@@ -1,2 +1,24 @@
 [tools]
 go = "1.25.7"
+"github:lucasew/workspaced" = "0.2.1"
+
+[tasks.lint]
+run = "workspaced codebase lint"
+
+[tasks.fmt]
+run = "workspaced codebase format"
+
+[tasks.test]
+depends = ["[task]:*"]
+run = "go test ./..."
+
+[tasks.codegen]
+depends = ["[task]:*"]
+run = "go generate ./..."
+
+[tasks.install]
+depends = ["[task]:*"]
+run = "go mod download"
+
+[tasks.ci]
+depends = ["lint", "test"]
