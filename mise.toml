@@ -9,16 +9,25 @@ run = "workspaced codebase lint"
 run = "workspaced codebase format"
 
 [tasks.test]
-depends = ["[task]:*"]
+depends = ["test:*"]
 run = "go test ./..."
 
 [tasks.codegen]
-depends = ["[task]:*"]
+depends = ["codegen:*"]
 run = "go generate ./..."
 
 [tasks.install]
-depends = ["[task]:*"]
+depends = ["install:*"]
 run = "go mod download"
 
 [tasks.ci]
 depends = ["lint", "test"]
+
+[tasks."install:dummy"]
+hide = true
+
+[tasks."test:dummy"]
+hide = true
+
+[tasks."codegen:dummy"]
+hide = true
