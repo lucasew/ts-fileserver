@@ -16,6 +16,9 @@ import (
 	"tailscale.com/tsnet"
 )
 
+// AppParams represents the configuration options needed to initialize the fileserver application.
+// It contains settings for binding to Tailscale, configuring Funnel (public internet access),
+// and defining the exposed filesystem state.
 type AppParams struct {
 	Root     string
 	Ctx      context.Context
@@ -35,10 +38,14 @@ type app struct {
 	writable bool
 }
 
+// ErrNotADir is returned when the configured Root path exists but is not a directory.
 var (
 	ErrNotADir = errors.New("not a directory")
 )
 
+// NewApp initializes a new ts-fileserver application instance from the provided AppParams.
+// It sets up the tsnet Server (Tailscale internal node), prepares the local state directory,
+// and instantiates the underlying FileServer handler to manage HTTP requests.
 func NewApp(args AppParams) (*app, error) {
 	if args.Ctx == nil {
 		args.Ctx = context.Background()
@@ -72,10 +79,14 @@ func NewApp(args AppParams) (*app, error) {
 	}, nil
 }
 
+// Close releases resources associated with the application, including cancelling its internal context.
 func (a *app) Close() {
 	defer a.cancel()
 }
 
+// Run starts the application's Tailscale node and begins listening for incoming HTTP requests.
+// If Funnel is enabled, it listens on the public internet on port 443; otherwise, it listens
+// securely within the Tailnet using Tailscale TLS on port 443.
 func (a *app) Run() error {
 	log.Printf("Starting file server on %s", a.handler.Root())
 	defer a.cancel()
@@ -100,6 +111,8 @@ func (a *app) Run() error {
 	return nil
 }
 
+// FileServer handles serving static files over HTTP and processing file uploads.
+// It is restricted to the configured root directory.
 type FileServer struct {
 	root     string
 	writable bool
@@ -155,11 +168,13 @@ async function upload() {
 <ul>
 `
 
+// WriteHTMLPrelude injects the static HTML and client-side JavaScript required for the file listing and upload UI.
 func (f *FileServer) WriteHTMLPrelude(w io.Writer) {
 	fmt.Fprintf(w, "%s", HTML_PRELUDE)
 }
 
 // ServeHTTP implements http.Handler.
+// ServeHTTP handles incoming requests, managing directory traversal prevention, file listing, file serving, and file uploads.
 func (f *FileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%s %s %s", r.Method, r.RemoteAddr, r.URL.Path)
 	item := path.Join(f.root, r.URL.Path)
@@ -237,10 +252,13 @@ func (f *FileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Root returns the configured root directory that this FileServer is restricted to.
 func (f *FileServer) Root() string {
 	return f.root
 }
 
+// NewFileServer instantiates a FileServer targeting the specified root directory.
+// It verifies that the target path exists and is a valid directory, preventing misconfiguration.
 func NewFileServer(root string, writable bool) (*FileServer, error) {
 	root, err := filepath.Abs(root)
 	if err != nil {
