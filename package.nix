@@ -1,8 +1,8 @@
-{ buildGo124Module
+{ buildGo125Module
 , self
 , lib
 }:
-buildGo124Module {
+buildGo125Module {
   pname = "ts-fileserver";
   version = "${builtins.readFile ./version.txt}-${self.shortRev or self.dirtyShortRev or "rev"}";
 
