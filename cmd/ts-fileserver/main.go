@@ -22,11 +22,11 @@ func main() {
 
 	app, err := fileserver.NewApp(params)
 	if err != nil {
-		log.Fatalf("failed to initialize application: %w", err)
+		log.Fatalf("failed to initialize application: %v", err)
 		return
 	}
 	if err := app.Run(); err != nil {
-		log.Fatalf("failed to run app: %w", err)
+		log.Fatalf("failed to run app: %v", err)
 		return
 	}
 }

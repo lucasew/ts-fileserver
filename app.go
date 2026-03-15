@@ -32,7 +32,6 @@ type app struct {
 	server   *tsnet.Server
 	handler  *FileServer
 	funnel   bool
-	writable bool
 }
 
 var (
@@ -59,6 +58,7 @@ func NewApp(args AppParams) (*app, error) {
 
 	handler, err := NewFileServer(args.Root, args.Writable)
 	if err != nil {
+		cancel()
 		return nil, err
 	}
 
@@ -156,7 +156,7 @@ async function upload() {
 `
 
 func (f *FileServer) WriteHTMLPrelude(w io.Writer) {
-	fmt.Fprintf(w, "%s", HTML_PRELUDE)
+	_, _ = fmt.Fprintf(w, "%s", HTML_PRELUDE)
 }
 
 // ServeHTTP implements http.Handler.
@@ -165,7 +165,7 @@ func (f *FileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	item := path.Join(f.root, r.URL.Path)
 	if !strings.HasPrefix(item, f.root) {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "nice try!")
+		_, _ = fmt.Fprintf(w, "nice try!")
 		return
 	}
 	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
@@ -173,67 +173,68 @@ func (f *FileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Expires", "0")
 	if r.URL.Path == "/installHook.js.map" || r.URL.Path == "/favicon.ico" {
 		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "these common routes are ignored")
+		_, _ = fmt.Fprintf(w, "these common routes are ignored")
 		return
 	}
 	if r.Method == http.MethodGet {
 		info, err := os.Stat(item)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprintf(w, "can't stat item: %s", err.Error())
+			_, _ = fmt.Fprintf(w, "can't stat item: %s", err.Error())
 			return
 		}
 		if info.IsDir() {
 			entries, err := os.ReadDir(item)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
-				fmt.Fprintf(w, "can't list folder entries: %s", err.Error())
+				_, _ = fmt.Fprintf(w, "can't list folder entries: %s", err.Error())
 				return
 			}
 			f.WriteHTMLPrelude(w)
-			fmt.Fprintf(w, "<h1>Files in %s</h1>", item)
+			_, _ = fmt.Fprintf(w, "<h1>Files in %s</h1>", item)
 			for _, entry := range entries {
-				fmt.Fprintf(w, "<li><a href=\"%s\">%s</a></li>", r.URL.JoinPath(entry.Name()), entry.Name())
+				_, _ = fmt.Fprintf(w, "<li><a href=\"%s\">%s</a></li>", r.URL.JoinPath(entry.Name()), entry.Name())
 			}
 		} else {
 			f, err := os.Open(item)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
-				fmt.Fprintf(w, "can't open file to be read: %s", err.Error())
+				_, _ = fmt.Fprintf(w, "can't open file to be read: %s", err.Error())
 				return
 			}
 			w.Header().Add("Content-Length", fmt.Sprintf("%d", info.Size()))
 			// w.Header().Add("Content-Type", "application/octet-stream")
-			defer f.Close()
+			defer func() { _ = f.Close() }()
 			buf := make([]byte, 1024*1024)
-			io.CopyBuffer(w, f, buf)
+			_, _ = io.CopyBuffer(w, f, buf)
 		}
 	}
 	if r.Method == http.MethodPost && !f.writable {
 		w.WriteHeader(http.StatusForbidden)
-		fmt.Fprintf(w, "i'm afraid i can't do that")
+		_, _ = fmt.Fprintf(w, "i'm afraid i can't do that")
 		return
 	}
 	if r.Method == http.MethodPost {
-		info, err := os.Stat(item)
+		info, _ := os.Stat(item)
 		if info != nil && info.IsDir() {
 			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprintf(w, "path should not be a existing folder")
+			_, _ = fmt.Fprintf(w, "path should not be a existing folder")
 			return
 		}
 		if err := os.MkdirAll(path.Dir(item), os.ModePerm); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprintf(w, "can't create parent directory: %s", err.Error())
+			_, _ = fmt.Fprintf(w, "can't create parent directory: %s", err.Error())
 			return
 		}
 		f, err := os.Create(item)
-		defer f.Close()
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprintf(w, "can't create file: %s", err.Error())
+			_, _ = fmt.Fprintf(w, "can't create file: %s", err.Error())
+			return
 		}
+		defer func() { _ = f.Close() }()
 		buf := make([]byte, 1024*1024)
-		io.CopyBuffer(f, r.Body, buf)
+		_, _ = io.CopyBuffer(f, r.Body, buf)
 	}
 }
 
