@@ -215,8 +215,8 @@ func (f *FileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.Method == http.MethodPost {
-		info, err := os.Stat(item)
-		if err == nil && info != nil && info.IsDir() {
+		info, _ := os.Stat(item)
+		if info != nil && info.IsDir() {
 			w.WriteHeader(http.StatusBadRequest)
 			_, _ = fmt.Fprintf(w, "path should not be a existing folder")
 			return

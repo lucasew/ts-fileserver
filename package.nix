@@ -1,8 +1,8 @@
-{ buildGo125Module
+{ buildGo124Module
 , self
 , lib
 }:
-buildGo125Module {
+buildGo124Module {
   pname = "ts-fileserver";
   version = "${builtins.readFile ./version.txt}-${self.shortRev or self.dirtyShortRev or "rev"}";
 
@@ -11,7 +11,7 @@ buildGo125Module {
   env.CGO_ENABLED = 0;
 
   # vendorHash = "sha256:${lib.fakeSha256}";
-  vendorHash = "sha256-EkqIQSaD9sL6Y/6K0lpIo7maO4ZWhgd3d0QtmuAQPRU=";
+  vendorHash = "sha256-+HrkluGKqo8xTi6ojB/NXnIWhY8paGRpWIymU66LFGM=";
 
   postConfigure = ''
     # chmod -R +w vendor/gvisor.dev/gvisor #/pkg/refs/refs_template.go

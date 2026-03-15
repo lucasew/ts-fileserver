@@ -1,1 +1,1 @@
-- 2025-03-15: Fix ignored errors on fmt.Fprintf/io.CopyBuffer/f.Close, prevent unused vars/fields, and use %v instead of %w in log.Fatalf to pass golangci-lint.
+- 2026-03-15: Ignore unused returns for io operations, call cancel before returning errors from context creations, use %v in log.Fatalf, and drop unused struct fields.
