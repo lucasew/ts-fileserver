@@ -10,7 +10,7 @@ buildGo125Module {
 
   env.CGO_ENABLED = 0;
 
-  # vendorHash = "sha256:${lib.fakeSha256}";
+  # vendorHash = "sha256-EkqIQSaD9sL6Y/6K0lpIo7maO4ZWhgd3d0QtmuAQPRU=";
   vendorHash = "sha256-EkqIQSaD9sL6Y/6K0lpIo7maO4ZWhgd3d0QtmuAQPRU=";
 
   postConfigure = ''
