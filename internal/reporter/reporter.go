@@ -2,7 +2,6 @@ package reporter
 
 import (
 	"log"
-	"os"
 )
 
 // ReportError centralizes error reporting for unexpected errors.
