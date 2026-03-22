@@ -20,5 +20,4 @@ func FatalError(format string, err error) {
 	} else {
 		log.Fatalf("[FATAL] "+format, "")
 	}
-	os.Exit(1)
 }
