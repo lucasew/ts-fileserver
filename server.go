@@ -9,6 +9,8 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/lucasew/ts-fileserver/internal/reporter"
 )
 
 type FileServer struct {
@@ -44,6 +46,7 @@ func (f *FileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (f *FileServer) handleGet(w http.ResponseWriter, r *http.Request, item string) {
 	info, err := os.Stat(item)
 	if err != nil {
+		reporter.ReportError(err)
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "can't stat item: %s", err.Error())
 		return
@@ -51,6 +54,7 @@ func (f *FileServer) handleGet(w http.ResponseWriter, r *http.Request, item stri
 	if info.IsDir() {
 		entries, err := os.ReadDir(item)
 		if err != nil {
+			reporter.ReportError(err)
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprintf(w, "can't list folder entries: %s", err.Error())
 			return
@@ -63,6 +67,7 @@ func (f *FileServer) handleGet(w http.ResponseWriter, r *http.Request, item stri
 	} else {
 		file, err := os.Open(item)
 		if err != nil {
+			reporter.ReportError(err)
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprintf(w, "can't open file to be read: %s", err.Error())
 			return
@@ -87,16 +92,19 @@ func (f *FileServer) handlePost(w http.ResponseWriter, r *http.Request, item str
 		return
 	}
 	if err := os.MkdirAll(path.Dir(item), os.ModePerm); err != nil {
+		reporter.ReportError(err)
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "can't create parent directory: %s", err.Error())
 		return
 	}
 	file, err := os.Create(item)
-	defer file.Close()
 	if err != nil {
+		reporter.ReportError(err)
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "can't create file: %s", err.Error())
+		return
 	}
+	defer file.Close()
 	buf := make([]byte, 1024*1024)
 	io.CopyBuffer(file, r.Body, buf)
 }
