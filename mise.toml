@@ -1,2 +1,14 @@
 [tools]
 go = "1.25.7"
+
+[tasks."test:go"]
+run = "go test ./..."
+
+[tasks."test:vet"]
+run = "go vet ./..."
+
+[tasks.test]
+depends = ["test:*"]
+
+[tasks.ci]
+depends = ["test"]
